@@ -1,7 +1,7 @@
 /*
-  Sensor code originally modified from: https://www.instructables.com/Simple-Arduino-and-HC-SR04-Example/
+  Sensor distance calculation modified from: https://www.instructables.com/Simple-Arduino-and-HC-SR04-Example/
 
-  HC-SR04 Ping distance sensors with doorway
+  Using 2 HC-SR04 Ping distance sensors with doorway
 
 */
 
@@ -16,16 +16,21 @@
 // tare button for zeroing the sensors at normal distance
 #define tareButton 2
 
-long normalDistance1 = 0;
-long normalDistance2 = 0;
+const int MAX_OCCUPANCY = 5; // change as needed
 
-int currentOccupancy;
-const int MAX_OCCUPANCY = 15;
-
-// debouncers for people
+// debouncers and delays to change in testing
 const long ENTRY_THRESHOLD = 50; // if person is less than 50cm they are present
-const int DEBOUNCE_TIME = 2000; // debounce time in ms (1000ms == 1s)
+const int DEBOUNCE_TIME = 750; // debounce time in ms (1000ms == 1s)
+const int SENSOR_DELAY = 250; // delay between the break of the 1 and 2 sensors to count as an entry or exit
+
+const int SENSOR_LOOP = 200; // Delay between the two sensors (may need to change)
+
+// trackers for global events
 unsigned long lastEventTime = 0; // last time an entry/exit event was recorded
+int currentOccupancy;
+
+long normalDistance1 = 0; // set with tare button
+long normalDistance2 = 0; // set with tare button
 
 void setup() {
   Serial.begin(9600);
@@ -47,22 +52,26 @@ void loop()
 {
   // zero button control that sets normal distance with no person in doorway
   if (digitalRead(tareButton) == LOW) {
-    calibrateSensors();
-    delay(50);    // debouncer
+    //calibrateSensors();
+    //delay(50); // debouncer for button
   }
 
   // distance with the sensor1
   long distance1 = measureDistance(trigPin1, echoPin1);
-  Serial.print("Distance 1: ");
+  Serial.print("Occ: ");
+  Serial.print(currentOccupancy);
+  Serial.print(", Distance 1: ");
   Serial.print(distance1);
   Serial.println(" cm");
   
-  // added delay since the sensors should alternate
-  delay(250); 
+  // so the sensors alternate "on" time
+  delay(SENSOR_LOOP); 
   
   // distance with sensor2
   long distance2 = measureDistance(trigPin2, echoPin2);
-  Serial.print("Distance 2: ");
+  Serial.print("Occ: ");
+  Serial.print(currentOccupancy);
+  Serial.print(", Distance 2: ");
   Serial.print(distance2);
   Serial.println(" cm");
 
@@ -70,7 +79,7 @@ void loop()
   checkEntryOrExit(distance1, distance2);
 
 
-  delay(250); // delay before next sensing cycle
+  delay(SENSOR_LOOP);
 }
 
 void calibrateSensors() 
@@ -99,31 +108,42 @@ long measureDistance(int trigPin, int echoPin)
   return distance;
 }
 
-void checkEntryOrExit(long distance1, long distance2)
+
+bool sensor1Triggered = false;
+bool sensor2Triggered = false;
+
+
 // important code that checks if the distances currently being sensed count as an entry or exit or nothing 
-{
-  if (millis() - lastEventTime > DEBOUNCE_TIME) // cant have a new entry/exit in less than debounce time
+void checkEntryOrExit(long distance1, long distance2) {
+  unsigned long currentTime = millis();
+  
+  // Check if a debounce period has elapsed since the last detected event
+  if (currentTime - lastEventTime > DEBOUNCE_TIME) 
   {
-    if (distance1 < normalDistance1 && distance2 > normalDistance2) //entry detected
+    // Entry: Sensor 1 detects an object closer than the entry threshold
+    if (distance1 < ENTRY_THRESHOLD && distance2 > ENTRY_THRESHOLD) 
     {
       currentOccupancy++;
-      Serial.print("Entry detected. Occupancy: ");
-      Serial.println(currentOccupancy);
-      if (currentOccupancy > MAX_OCCUPANCY) // Check against max occupancy
+      Serial.println("Entry detected.");
+
+      if (currentOccupancy > MAX_OCCUPANCY) // if a person comes in when the occupancy is full
       { 
-        Serial.println("max occupancy reached. mechanical actuation etc");
+        // buzzer beep
+        Serial.println("STOP COMING IN, MAX OCCUPANCY REACHED");
       }
-      lastEventTime = millis(); // Update last event time for people debouncer
-    } 
-    else if (distance1 > normalDistance1 && distance2 < normalDistance2) // exit detected
+      lastEventTime = currentTime;
+    }
+
+
+    // Exit: Sensor 2 detects an object closer than the entry threshold
+    else if (distance2 < ENTRY_THRESHOLD && distance1 > ENTRY_THRESHOLD) 
     {
       if (currentOccupancy > 0) // no negative occupancy
       {
         currentOccupancy--;
-        Serial.print("Exit detected. Occupancy: ");
-        Serial.println(currentOccupancy);
+        Serial.println("Exit detected.");
       }
-      lastEventTime = millis(); // Update last event time for people debouncer
+      lastEventTime = currentTime; // Update last event time for people debouncer
     }
   }
 }
