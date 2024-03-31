@@ -18,8 +18,9 @@
 #define tareButton 2
 
 #define redLed 8 // 150 ohm resistor
+#define greenLed 9
 
-const int MAX_OCCUPANCY = 2; // change as needed
+const int MAX_OCCUPANCY = 3; // change as needed
 
 // debouncers and delays to change in testing
 const long ENTRY_THRESHOLD = 70; // if person is less than 50cm they are present
@@ -73,6 +74,10 @@ void setup() {
   lcd.backlight();    // Turn on the LCD screen backlight
 
   pinMode(redLed, OUTPUT);
+  pinMode(redLed, OUTPUT);
+            digitalWrite(greenLed, HIGH);
+
+
 }
 
 void loop() 
@@ -155,6 +160,8 @@ void checkEntryOrExit(long distance1, long distance2) {
         audioWarning();
         moveArmOut();
         digitalWrite(redLed, HIGH); // Turn on red led
+        digitalWrite(greenLed, LOW); // Turn on red led
+
         Serial.println("STOP COMING IN, MAX OCCUPANCY REACHED");
       }
       lastEventTime = currentTime;
@@ -172,6 +179,8 @@ void checkEntryOrExit(long distance1, long distance2) {
         if (currentOccupancy < MAX_OCCUPANCY && isArmOut) {
           moveArmIn();
           digitalWrite(redLed, LOW);
+          digitalWrite(greenLed, HIGH);
+
         }
       }
       lastEventTime = currentTime; // Update last event time for people debouncer
