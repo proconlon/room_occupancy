@@ -28,6 +28,9 @@ const int DEBOUNCE_TIME = 2500; // debounce time in ms (1000ms == 1s)
 
 const int SENSOR_LOOP = 100; // Delay between the two sensors (may need to change)
 
+
+
+
 // trackers for global events
 unsigned long lastEventTime = 0; // last time an entry/exit event was recorded
 int currentOccupancy;
@@ -74,8 +77,8 @@ void setup() {
   lcd.backlight();    // Turn on the LCD screen backlight
 
   pinMode(redLed, OUTPUT);
-  pinMode(redLed, OUTPUT);
-            digitalWrite(greenLed, HIGH);
+  pinMode(greenLed, OUTPUT);
+  digitalWrite(greenLed, HIGH);
 
 
 }
@@ -160,7 +163,7 @@ void checkEntryOrExit(long distance1, long distance2) {
         audioWarning();
         moveArmOut();
         digitalWrite(redLed, HIGH); // Turn on red led
-        digitalWrite(greenLed, LOW); // Turn on red led
+        digitalWrite(greenLed, LOW); // Turn off green
 
         Serial.println("STOP COMING IN, MAX OCCUPANCY REACHED");
       }
@@ -298,22 +301,18 @@ void moveArmIn()
 
 void lcdUpdate()
 {
-  lcd.clear();
-  lcd.setCursor(2, 0);
-  //lcd.print("D1: ");
-  //lcd.print(distance1);
-  //lcd.setCursor(1, 1);
-  //lcd.print("D2: ");
-  //lcd.print(distance2);
-
-  lcd.print("Occupancy: ");
+  lcd.setCursor(0, 0);
+  lcd.print("Occupants:");
   lcd.print(currentOccupancy);
 
-  lcd.setCursor(1, 1);
-  if (currentOccupancy >= MAX_OCCUPANCY)
+  lcd.setCursor(0, 1);
+  if (currentOccupancy >= MAX_OCCUPANCY) 
   {
-    lcd.print("ROOM FULL ");
+    lcd.print("   ROOM FULL   "); // over write whole line
+  } 
+  else 
+  {
+    lcd.print("   Come in!   "); // clear line 
   }
-  //delay(3000);
-  //lcd.clear();
+
 }
