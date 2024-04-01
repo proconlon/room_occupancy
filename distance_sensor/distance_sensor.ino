@@ -246,13 +246,13 @@ void moveArmOut()
       digitalWrite(ctr_d,LOW);
       delayMicroseconds(t);
     }
+    disableMotorCoils();
 
   }
 }
 void moveArmIn()
 {
   // move the arm back
-  isArmOut = false;
     // Move 90 degrees back to the original position
     for(i=127; i>=1; i--) { // 50 steps back
       // Reverse the order of operations to step backwards
@@ -297,7 +297,19 @@ void moveArmIn()
       digitalWrite(ctr_d,HIGH);
       delayMicroseconds(t);
     }
+  disableMotorCoils();
+  isArmOut = false;
 }
+
+// turns off power to the stepper
+void disableMotorCoils() 
+{
+    digitalWrite(ctr_a, LOW);
+    digitalWrite(ctr_b, LOW);
+    digitalWrite(ctr_c, LOW);
+    digitalWrite(ctr_d, LOW);
+}
+
 
 void lcdUpdate()
 {
