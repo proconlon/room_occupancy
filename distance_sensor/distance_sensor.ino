@@ -252,7 +252,9 @@ void moveArmOut()
 }
 void moveArmIn()
 {
-  // move the arm back
+  // move the arm back only if it's out
+  if(isArmOut) {
+    isArmOut = false;
     // Move 90 degrees back to the original position
     for(i=127; i>=1; i--) { // 50 steps back
       // Reverse the order of operations to step backwards
@@ -298,7 +300,7 @@ void moveArmIn()
       delayMicroseconds(t);
     }
   disableMotorCoils();
-  isArmOut = false;
+  }
 }
 
 // turns off power to the stepper
