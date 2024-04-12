@@ -27,17 +27,16 @@ const int MAX_OCCUPANCY = 3;
 
 // debouncers and delays to change in testing
 const long ENTRY_THRESHOLD = 70; // if person is less than 50cm they are present
-const int DEBOUNCE_TIME = 2500; // debounce time in ms (1000ms == 1s)
-
-const int SENSOR_LOOP = 100; // Delay between the two sensors (may need to change)
+const int DEBOUNCE_TIME = 2500; // 2.5s debouncer for people
+const int SENSOR_DELAY = 250; // duration to check for second sensor after the first sensor is broken
 
 
 // trackers for global events
 int currentOccupancy = 0;
 bool isArmOut = false;
-long distance1, distance2;
-long normalDistance1 = 0; // set with tare button
-long normalDistance2 = 0; // set with tare button
+long normalDistance1, normalDistance2; // currently usused
+bool isDebouncing = false;
+unsigned long lastDetectionTime = 0;
 
 // set the LCD address to 0x27 for a 16 chars and 2 line display
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
@@ -77,40 +76,15 @@ void setup() {
   pinMode(redLed, OUTPUT);
   pinMode(greenLed, OUTPUT);
   digitalWrite(greenLed, HIGH);
+
+  lcdUpdate();
 }
 
 void loop() 
 {
-  lcdUpdate(); // update display every loop
-
-  // zero button control that sets normal distance with no person in doorway
-  if (digitalRead(tareButton) == LOW) {
-    //calibrateSensors();
-    //delay(50); // debouncer for button
+  if (!isDebouncing || (millis() - lastDetectionTime > DEBOUNCE_TIME)) {
+    checkEntryOrExit();
   }
-
-  // print distance with the sensor1
-  distance1 = measureDistance(trigPin1, echoPin1);
-  Serial.print("Occ: ");
-  Serial.print(currentOccupancy);
-  Serial.print(", Distance 1: ");
-  Serial.print(distance1);
-  Serial.println(" cm");
-    
-  checkEntryOrExit(distance1, distance2);
-  delay(SENSOR_LOOP); // delay so the sensors alternate "on" time
-  
-  // distance with sensor2
-  distance2 = measureDistance(trigPin2, echoPin2);
-  Serial.print("Occ: ");
-  Serial.print(currentOccupancy);
-  Serial.print(", Distance 2: ");
-  Serial.print(distance2);
-  Serial.println(" cm");
-
-  // Logic to determine entry or exit
-  checkEntryOrExit(distance1, distance2);
-  delay(SENSOR_LOOP);
 }
 
 void calibrateSensors() 
@@ -140,51 +114,69 @@ long measureDistance(int trigPin, int echoPin)
 }
 
 // important code that checks if the distances currently being sensed count as an entry or exit or nothing 
-void checkEntryOrExit(long distance1, long distance2) {
-  static unsigned long lastEventTime = 0; // last time an entry/exit event was recorded
-  unsigned long currentTime = millis();
-  // Check if a debounce period has elapsed since the last detected event
-  if (currentTime - lastEventTime > DEBOUNCE_TIME) 
-  {
-    // Entry: Sensor 1 detects an object closer than the entry threshold
-    if (distance1 < ENTRY_THRESHOLD && distance2 > ENTRY_THRESHOLD) 
-    {
-      currentOccupancy++;
-      Serial.println("Entry detected.");
+void checkEntryOrExit() {
+  long distance1 = measureDistance(trigPin1, echoPin1);
+  long distance2 = measureDistance(trigPin2, echoPin2);
 
-      if (currentOccupancy >= MAX_OCCUPANCY) // if a person comes in when the occupancy is full
-      { 
-        // buzzer beep
-        // move mechanical arm to out
-        audioWarning();
-        moveArmOut();
-        digitalWrite(redLed, HIGH); // Turn on red led
-        digitalWrite(greenLed, LOW); // Turn off green
-
-        Serial.println("STOP COMING IN, MAX OCCUPANCY REACHED");
+  if (distance1 < ENTRY_THRESHOLD) {
+    unsigned long startTime = millis();
+    while (millis() - startTime < SENSOR_DELAY) {
+      distance2 = measureDistance(trigPin2, echoPin2);
+      if (distance2 < ENTRY_THRESHOLD) {
+        entryDetected();
+        return; // exit loop after second sensor is broken
       }
-      lastEventTime = currentTime;
-    }
-
-
-    // Exit: Sensor 2 detects an object closer than the entry threshold
-    else if (distance2 < ENTRY_THRESHOLD && distance1 > ENTRY_THRESHOLD) 
-    {
-      if (currentOccupancy > 0) // no negative occupancy
-      {
-        currentOccupancy--;
-        
-        Serial.println("Exit detected.");
-        if (currentOccupancy < MAX_OCCUPANCY && isArmOut) {
-          moveArmIn();
-          digitalWrite(redLed, LOW);
-          digitalWrite(greenLed, HIGH);
-
-        }
-      }
-      lastEventTime = currentTime; // Update last event time for people debouncer
+      delay(50); // short delay to prevent misreads (in ms)
     }
   }
+
+  if (distance2 < ENTRY_THRESHOLD) {
+    unsigned long startTime = millis();
+    while (millis() - startTime < SENSOR_DELAY) {
+      distance1 = measureDistance(trigPin1, echoPin1);
+      if (distance1 < ENTRY_THRESHOLD) {
+        exitDetected();
+        return; // exit loop after second sensor is broken
+      }
+      delay(50); 
+    }
+  }
+}
+
+void entryDetected() {
+  currentOccupancy++;
+  Serial.println("Entry detected.");
+
+  if (currentOccupancy >= MAX_OCCUPANCY) // if a person comes in when the occupancy is full
+  { 
+    // buzzer beep
+    // move mechanical arm to out
+    audioWarning();
+    moveArmOut();
+    lcdUpdate();
+    digitalWrite(redLed, HIGH); // Turn on red led
+    digitalWrite(greenLed, LOW); // Turn off green
+
+    Serial.println("STOP COMING IN, MAX OCCUPANCY REACHED");
+  }
+  isDebouncing = true;
+  lastDetectionTime = millis();
+}
+
+void exitDetected() {
+  if (currentOccupancy > 0) // no negative occupancy
+  {
+    currentOccupancy--;
+    Serial.println("Exit detected.");
+
+    if (currentOccupancy < MAX_OCCUPANCY) { // if occupancy is less than max let people in
+      moveArmIn();
+      digitalWrite(redLed, LOW);
+      digitalWrite(greenLed, HIGH);
+    }
+  }
+  isDebouncing = true;
+  lastDetectionTime = millis();
 }
 
 void audioWarning()
