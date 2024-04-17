@@ -26,9 +26,9 @@ const int MAX_OCCUPANCY = 3;
 // *********************************************** //
 
 // debouncers and delays to change in testing
-const long ENTRY_THRESHOLD = 70; // if person is less than 50cm they are present
-const int DEBOUNCE_TIME = 2500; // 2.5s debouncer for people
-const int SENSOR_DELAY = 250; // duration to check for second sensor after the first sensor is broken
+const long ENTRY_THRESHOLD = 40; // if person is less than 50cm they are present
+const int DEBOUNCE_TIME = 1500; // 2.5s debouncer for people
+const int SENSOR_DELAY = 1500; // duration to check for second sensor after the first sensor is broken
 
 
 // trackers for global events
@@ -82,9 +82,15 @@ void setup() {
 
 void loop() 
 {
-  if (!isDebouncing || (millis() - lastDetectionTime > DEBOUNCE_TIME)) {
+  //if (!isDebouncing || (millis() - lastDetectionTime > DEBOUNCE_TIME)) {
+  if (!isDebouncing ) {
     checkEntryOrExit();
   }
+
+  if ((millis() - lastDetectionTime > DEBOUNCE_TIME)) {
+    isDebouncing = false;
+  }
+
 }
 
 void calibrateSensors() 
