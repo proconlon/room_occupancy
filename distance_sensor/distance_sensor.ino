@@ -26,9 +26,9 @@ const int MAX_OCCUPANCY = 3;
 // *********************************************** //
 
 // debouncers and delays to change in testing
-const long ENTRY_THRESHOLD = 40; // if person is less than 50cm they are present
+const long ENTRY_THRESHOLD = 50; // if person is less than 50cm they are present
 const int DEBOUNCE_TIME = 1500; // 2.5s debouncer for people
-const int SENSOR_DELAY = 1500; // duration to check for second sensor after the first sensor is broken
+const int SENSOR_DELAY = 2000; // duration to check for second sensor after the first sensor is broken
 
 
 // trackers for global events
@@ -83,9 +83,10 @@ void setup() {
 void loop() 
 {
   //if (!isDebouncing || (millis() - lastDetectionTime > DEBOUNCE_TIME)) {
-  if (!isDebouncing ) {
+  //if (!isDebouncing ) {
     checkEntryOrExit();
-  }
+    delay(20);
+ // }
 
   if ((millis() - lastDetectionTime > DEBOUNCE_TIME)) {
     isDebouncing = false;
@@ -123,6 +124,12 @@ long measureDistance(int trigPin, int echoPin)
 void checkEntryOrExit() {
   long distance1 = measureDistance(trigPin1, echoPin1);
   long distance2 = measureDistance(trigPin2, echoPin2);
+      Serial.print("1: ");
+            Serial.print(distance1);
+
+    Serial.print(" 2: ");
+    Serial.print(distance2);
+     Serial.println();
 
   if (distance1 < ENTRY_THRESHOLD) {
     unsigned long startTime = millis();
@@ -132,7 +139,7 @@ void checkEntryOrExit() {
         entryDetected();
         return; // exit loop after second sensor is broken
       }
-      delay(50); // short delay to prevent misreads (in ms)
+      //delay(10); // short delay to prevent misreads (in ms)
     }
   }
 
@@ -144,7 +151,7 @@ void checkEntryOrExit() {
         exitDetected();
         return; // exit loop after second sensor is broken
       }
-      delay(50); 
+      //delay(10); 
     }
   }
 }
@@ -152,6 +159,7 @@ void checkEntryOrExit() {
 void entryDetected() {
   currentOccupancy++;
   Serial.println("Entry detected.");
+  lcdUpdate();
 
   if (currentOccupancy >= MAX_OCCUPANCY) // if a person comes in when the occupancy is full
   { 
@@ -159,7 +167,7 @@ void entryDetected() {
     // move mechanical arm to out
     audioWarning();
     moveArmOut();
-    lcdUpdate();
+    //lcdUpdate();
     digitalWrite(redLed, HIGH); // Turn on red led
     digitalWrite(greenLed, LOW); // Turn off green
 
@@ -174,6 +182,7 @@ void exitDetected() {
   {
     currentOccupancy--;
     Serial.println("Exit detected.");
+    lcdUpdate();
 
     if (currentOccupancy < MAX_OCCUPANCY) { // if occupancy is less than max let people in
       moveArmIn();
