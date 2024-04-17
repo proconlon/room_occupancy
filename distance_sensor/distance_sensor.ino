@@ -124,12 +124,10 @@ long measureDistance(int trigPin, int echoPin)
 void checkEntryOrExit() {
   long distance1 = measureDistance(trigPin1, echoPin1);
   long distance2 = measureDistance(trigPin2, echoPin2);
-      Serial.print("1: ");
-            Serial.print(distance1);
-
-    Serial.print(" 2: ");
-    Serial.print(distance2);
-     Serial.println();
+  Serial.print("1: ");
+  Serial.print(distance1);
+  Serial.print(" 2: ");
+  Serial.println(distance2);
 
   if (distance1 < ENTRY_THRESHOLD) {
     unsigned long startTime = millis();
