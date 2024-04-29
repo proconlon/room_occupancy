@@ -32,7 +32,7 @@
 #define trigPin2 11
 #define echoPin2 10
 
-#define redLed 8 // 150 ohm resistor
+#define redLed 6 // 150 ohm resistor
 #define greenLed 9
 #define buzzerPin 7
 
@@ -44,7 +44,7 @@ long ENTRY_THRESHOLD = 70;      // if person is less than 70cm they are present 
 
 // debouncers and delays to change in testing
 const int DEBOUNCE_TIME = 1500; // A new entry or exit cannot occur less than 1500 ms apart
-const int SENSOR_DELAY = 2000;  // duration to wait for a second sensor to trigger after the first sensor is broken
+const int SENSOR_DELAY = 2250;  // duration to wait for a second sensor to trigger after the first sensor is broken
 const int SENSE_LOOP = 40;      // time between sensors (should be a small number to ensure continous sensing)
 
 // trackers for global events
@@ -144,9 +144,13 @@ long measureDistance(int trigPin, int echoPin)
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
   
-  duration = pulseIn(echoPin, HIGH);
-  distance = duration * 0.034 / 2; // distance calculation
-  
+  duration = pulseIn(echoPin, HIGH, 25000);  // 250000 microseconds as a timeout for the max range (400cm)
+  if (duration == 0) {
+    // no pulse was returned within the timeout period
+    distance = -1;  // out of range
+  } else {
+    distance = duration * 0.034 / 2;  // distance calc
+  }
   return distance;
 }
 
@@ -203,6 +207,7 @@ void entryDetected() {
   { 
     // buzzer beep and move arm out
     audioWarning();
+    delay(500);
     moveArmOut(); // will do nothing if the arm is already out
     digitalWrite(redLed, HIGH); // Turn on red led
     digitalWrite(greenLed, LOW); // Turn off green
@@ -219,13 +224,13 @@ void exitDetected() {
   {
     currentOccupancy--;
     Serial.println("Exit detected.");
-    lcdUpdate();
 
     if (currentOccupancy < MAX_OCCUPANCY) { // if occupancy is less than max, let people in
       moveArmIn();
       digitalWrite(redLed, LOW);
       digitalWrite(greenLed, HIGH);
     }
+    lcdUpdate();
   }
   
 }
@@ -238,7 +243,7 @@ void audioWarning()
 
   static bool buzzerActive = false; // static tracker
   static unsigned long buzzerStartTime = 0; // start time of buzzer
-  const unsigned long buzzerDuration = 500; // buzz time in ms
+  const unsigned long buzzerDuration = 750; // buzz time in ms
 
   unsigned long currentMillis = millis(); // current time
 
@@ -259,7 +264,7 @@ void moveArmOut()
     isArmOut = true; 
     // move arm out
     // Move 90 degrees in one direction
-    for(int i=127; i>=1; i--) { // 50 steps for 90 degrees
+    for(int i=128; i>=1; i--) { // 50 steps for 90 degrees
       digitalWrite(ctr_a,LOW); //A
       digitalWrite(ctr_b,HIGH);
       digitalWrite(ctr_c,HIGH);
@@ -311,7 +316,7 @@ void moveArmIn()
   if(isArmOut) {
     isArmOut = false;
     // Move 90 degrees back to the original position
-    for(int i=127; i>=1; i--) { // 50 steps back
+    for(int i=128; i>=1; i--) { // 50 steps back
       // Reverse the order of operations to step backwards
       digitalWrite(ctr_a,LOW); //DA
       digitalWrite(ctr_b,HIGH);
