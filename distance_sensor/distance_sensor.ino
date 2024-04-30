@@ -147,7 +147,7 @@ long measureDistance(int trigPin, int echoPin)
   duration = pulseIn(echoPin, HIGH, 25000);  // 250000 microseconds as a timeout for the max range (400cm)
   if (duration == 0) {
     // no pulse was returned within the timeout period
-    distance = -1;  // out of range
+    distance = 999999999;  // out of range, set distance to some large value
   } else {
     distance = duration * 0.034 / 2;  // distance calc
   }
@@ -238,23 +238,8 @@ void exitDetected() {
 void audioWarning()
 {
   // buzz an audio warning if you try to enter while room is at max occupancy
-  // using non-blocking time so shouldn't stop sensors or anything else
   Serial.println("buzz buzz.");
-
-  static bool buzzerActive = false; // static tracker
-  static unsigned long buzzerStartTime = 0; // start time of buzzer
-  const unsigned long buzzerDuration = 750; // buzz time in ms
-
-  unsigned long currentMillis = millis(); // current time
-
-  if (!buzzerActive) {
-      buzzerActive = true;               // set buzzer active
-      buzzerStartTime = currentMillis;   // record the start time
-      digitalWrite(buzzerPin, HIGH);     // turn the buzzer on
-  } else if (currentMillis - buzzerStartTime >= buzzerDuration) {
-      digitalWrite(buzzerPin, LOW);      // turn the buzzer off after the duration
-      buzzerActive = false;              // reset state
-  }
+  tone(buzzerPin, 1500, 3000 );
 }
 
 void moveArmOut()
