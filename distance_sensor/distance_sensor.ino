@@ -42,7 +42,7 @@ const int MAX_OCCUPANCY = 3;
 long ENTRY_THRESHOLD = 70;      // if person is less than 70cm they are present and the beam is "broken"
 // *********************************************** //
 
-// debouncers and delays to change in testing
+// debouncers and delays to change (not recommended)
 const int DEBOUNCE_TIME = 1500; // A new entry or exit cannot occur less than 1500 ms apart
 const int SENSOR_DELAY = 2250;  // duration to wait for a second sensor to trigger after the first sensor is broken
 const int SENSE_LOOP = 40;      // time between sensors (should be a small number to ensure continous sensing)
